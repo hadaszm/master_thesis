@@ -1,6 +1,24 @@
 from functools import partial
 from operator import is_not
 import numpy as np
+from  streams.stream_section import StreamSection
+
+def generate_stream_section(dataset, stream_name, dataset_name, start=0, stop=1000):
+    """
+    generates the StreamSection 
+    if synth geneartor for take the stop-start instances are taken
+
+    """
+
+    # TODO: Maybe move to some globalk constants
+    if dataset_name in ['LED', 'HyperPlane', 'AGRAWL', 'RandomRBF']:
+        to_take = stop-start
+        return StreamSection(stream_name, [instance for instance in dataset.take(to_take)], True)
+
+    elif dataset_name in ['Airlines', 'Cover_Type', 'Electricity']:
+        # dataset pass as list
+        return StreamSection(stream_name, [instance for instance in dataset[start:stop]], True)
+
 
 def FL(stream) -> bool:
     """

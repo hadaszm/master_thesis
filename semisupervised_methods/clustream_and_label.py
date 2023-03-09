@@ -6,6 +6,18 @@ from river.cluster.clustream import CluStreamMicroCluster
 
 
 class CluStreamMicroClusterWithLabel(CluStreamMicroCluster):
+    """ 
+    Extension of CluStreamMicroCluster class
+
+
+    Parameters
+    ----------
+        labels: dict
+            dict with number of each label occurnace
+
+        the rest of parameters as in CluStreamMicroCluster class
+
+    """
     def __init__(   self,   x: dict = defaultdict(float),
         labels: dict = {},
         w: float = None,
@@ -14,9 +26,11 @@ class CluStreamMicroClusterWithLabel(CluStreamMicroCluster):
             self.labels = labels
                 
     def _add_label(self,y):
+        """ add the label y occurance"""
         self.labels[y] = self.labels.get(y,0)+1
 
     def insert(self, x,y, w, timestamp):
+        """insert new instance to a microcluster"""
         self.var_time.update(timestamp, w)
         for x_idx, x_val in x.items():
             self.var_x[x_idx].update(x_val, w)
@@ -32,9 +46,16 @@ class CluserAndLabel(CluStream):
         - modified  _maintain_micro_clusters, predict_one, learn_one
         - macroclusters not used
 
-    """
+    Parameters
+       ----------
+        train_period: int
+            number of labelled instances the classifier needs to get before it can work with unlabelled ones
 
-    def __init__(self,
+        the rest of parameters as in CluStream class
+
+       """
+
+    def __init__(self,train_period=0,
                  n_macro_clusters: int = 5,
                  max_micro_clusters: int = 100,
                  micro_cluster_r_factor: int = 2,
@@ -46,12 +67,25 @@ class CluserAndLabel(CluStream):
                          micro_cluster_r_factor, time_window, time_gap, seed, **kwargs)
         self.micro_clusters: typing.Dict[int,
                                          CluStreamMicroClusterWithLabel] = {}
+        self.train_period=train_period
+
 
     def _merge_clusters_label_count(self, labels1, labels2):
         """
         When two clusters are merged their labels dictionary also need to be merged
         and if they have the same keys, the value need to be summed
+
+        Parameters
+        ----------
+        labels1,labels2: dict
+            dictionaries of labels as keys and their frequency as values
+
+        Returns
+        -------
+        dict
+            with sum of each label frequency
         """
+
         cnt1 = Counter(labels1)
         cnt2 = Counter(labels2)
         return dict(cnt1 + cnt2)
@@ -59,6 +93,7 @@ class CluserAndLabel(CluStream):
     def _maintain_micro_clusters(self, x, w, y):
         """
         Diffrence in merging introduced
+        TODO: better understandf what w does
         """
         # Calculate the threshold to delete old micro-clusters
         threshold = self._timestamp - self.time_window
@@ -128,8 +163,10 @@ class CluserAndLabel(CluStream):
         If y not avaiable it predicts a label and assigns it as a pseudolabel
         The macroclusters are not used"""
         if y is None:
+            if self._timestamp < self.train_period:
+                return self
             y = self.predict_one(x)
-
+        
         self._timestamp += 1
 
         if not self._initialized:
