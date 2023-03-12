@@ -102,7 +102,6 @@ class CluserAndLabel(CluStream):
         del_id = None
         for i, mc in self.micro_clusters.items():
             if mc.relevance_stamp(self.max_micro_clusters) < threshold:
-                print(i)
                 del_id = i
                 break
 
@@ -141,10 +140,10 @@ class CluserAndLabel(CluStream):
             timestamp=self._timestamp,
         )
 
-    def return_microclusters(self):
-        """ Method for printing the labels statistics in each microcluster"""
-        for i, mc in self.micro_clusters.items():
-            print(i,mc.labels)
+    # def return_microclusters(self):
+    #     """ Method for printing the labels statistics in each microcluster"""
+    #     for i, mc in self.micro_clusters.items():
+    #         print(i,mc.labels)
     def sum_labels(self):
         """ Method for summing the number of stored labels -- needed for testing"""
         s = 0
