@@ -78,7 +78,7 @@ def get_AGRAWL(classification_function: int = 0,  balance_classes: bool = False,
     '''
     returns the AGRAWL data stream -> parameters the same as in datasets.synth.Agrawl
     '''
-    agrawl = datasets.synth.Agrawl(classification_function=classification_function, seed=RANDOM_SEED, balance_classes=balance_classes,
+    agrawl = datasets.synth.Agrawal(classification_function=classification_function, seed=RANDOM_SEED, balance_classes=balance_classes,
                                    perturbation=perturbation)
     return agrawl
 

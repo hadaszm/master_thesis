@@ -72,7 +72,7 @@ def FU(stream, probability, no_delete_period=10) -> list:
     def chceck_proba(instance):
         '''deletes label if random value is smaller then the probability'''
         if instance[0] > no_delete_period and np.random.random() < probability:
-            return instance[0],instance[1],instance[2], None
+            return instance[0], instance[1], instance[2], None
         return instance
 
     stream = list(map(partial(chceck_proba), stream))

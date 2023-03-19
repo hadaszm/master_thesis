@@ -27,6 +27,7 @@ class IncrementalClassifer(RiverClassifer):
         self.threshold = threshold
         self.classifier = classifier(**params)
         self._timestamp = 0
+        self.iter_number = 0
         self.train_period = train_period
 
         super().__init__()
@@ -45,11 +46,11 @@ class IncrementalClassifer(RiverClassifer):
             if pred_proba >= self.threshold:
                 y = pred_class
             else:
-                self._timestamp += 1
                 return self
 
         self.classifier = self.classifier.learn_one(x=x, y=y)
-        self.iter_number += 1
+        # TODO: check if needed
+        self._timestamp += 1
         return self
 
     def predict_one(self, x):
