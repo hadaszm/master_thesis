@@ -1,5 +1,8 @@
 import operator
+import typing
+import inspect
 from river.base.classifier import Classifier as RiverClassifer
+from river.base.base import Base
 
 
 class IncrementalClassifer(RiverClassifer):
@@ -24,11 +27,13 @@ class IncrementalClassifer(RiverClassifer):
            parameters for the classifier
 
        """
+        super().__init__()
         self.threshold = threshold
         self.classifier = classifier(**params)
         self._timestamp = 0
         self.iter_number = 0
         self.train_period = train_period
+
 
         super().__init__()
 
@@ -58,3 +63,21 @@ class IncrementalClassifer(RiverClassifer):
 
     def predict_proba_one(self, x):
         return self.classifier.predict_proba_one(x=x)
+    
+    def _get_params(self) -> typing.Dict[str, typing.Any]:
+        """Return the parameters that were used during initialization."""
+
+        params = {}
+
+        for name, param in inspect.signature(self.classifier.__init__).parameters.items():  # type: ignore
+           
+            # Keywords parameters
+            attr = getattr(self.classifier, name)
+            params[name] = attr
+
+        params['threshold'] = self.threshold
+        params['train_period'] = self.train_period
+        params['classifier'] = self.classifier.__class__
+            
+
+        return params

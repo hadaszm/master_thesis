@@ -36,7 +36,7 @@ class oneNNClassifer():
             self._label_the_closest()
 
     def learn_one(self,x,y):
-        if self._timestamp < self.training_time:
+        if self._timestamp < self.training_time: #TODO: change to learn in every iterration
             if y == self.positive:
                 self.L = pd.concat([self.L, pd.DataFrame(x, index = [self._timestamp])])
             else:

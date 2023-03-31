@@ -56,7 +56,7 @@ class CluserAndLabel(CluStream):
        """
 
     def __init__(self,train_period=0,
-                 n_macro_clusters: int = 5,
+                 n_macro_clusters: int = 5, #TODO raczej usunac jesli nie potrzebne
                  max_micro_clusters: int = 100,
                  micro_cluster_r_factor: int = 2,
                  time_window: int = 1000,
@@ -198,6 +198,7 @@ class CluserAndLabel(CluStream):
                 distance = self._distance(mc.center, center)
                 radius = min(distance, radius)
         else:
+            print
             radius = closest_mc.radius(self.micro_cluster_r_factor)
 
         if closest_dist < radius:

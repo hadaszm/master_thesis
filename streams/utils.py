@@ -2,23 +2,46 @@ from functools import partial
 from operator import is_not
 import numpy as np
 from streams.stream_section import StreamSection
+from river.preprocessing import StandardScaler
 
 
-def generate_stream_section(dataset, stream_name, dataset_name, start=0, stop=1000):
+def generate_stream_section(dataset, stream_name, dataset_name, with_scaling = False, start=0, stop=1000):
     """
     generates the StreamSection 
     if synth geneartor for take the stop-start instances are taken
+    if needed scaling added
 
     """
-
+    #TODO: add exception
     # TODO: Maybe move to some globalk constants
-    if dataset_name in ['LED', 'HyperPlane', 'AGRAWL', 'RandomRBF']:
+    if dataset_name in ['LED', 'AGRAWL', 'RandomRBF','HyperPlane']:
+        to_take = stop-start
+        if not with_scaling:
+            return StreamSection(stream_name, [(cur_idx, cur_idx, instance[0], instance[1]) for cur_idx, instance in enumerate(dataset.take(to_take))], True)
+        else:
+            scaler = StandardScaler()
+            res = []
+            for cur_index,(x,y) in enumerate(dataset.take(to_take)):
+                scaler = scaler.learn_one(x)
+                x = scaler.transform_one(x)
+                res.append((cur_index,cur_index,x,y))
+            return StreamSection(stream_name, res, True)
+    elif dataset_name in ['Airlines', 'Cover_Type', 'Electricity']:
+        # dataset pass as list
+        if not with_scaling:
+            return StreamSection(stream_name, [(cur_idx, cur_idx, instance[0], instance[1]) for cur_idx, instance in enumerate(dataset[start:stop])], True)
+        else:
+            scaler = StandardScaler()
+            res = []
+            for cur_index,(x,y) in  enumerate(dataset[start:stop]):
+                scaler = scaler.learn_one(x)
+                x = scaler.transform_one(x)
+                res.append((cur_index,cur_index,x,y))
+            return StreamSection(stream_name, res, True)
+    else:
         to_take = stop-start
         return StreamSection(stream_name, [(cur_idx, cur_idx, instance[0], instance[1]) for cur_idx, instance in enumerate(dataset.take(to_take))], True)
 
-    elif dataset_name in ['Airlines', 'Cover_Type', 'Electricity']:
-        # dataset pass as list
-        return StreamSection(stream_name, [(cur_idx, cur_idx, instance[0], instance[1]) for cur_idx, instance in enumerate(dataset[start:stop])], True)
 
 
 def FL(stream) -> bool:

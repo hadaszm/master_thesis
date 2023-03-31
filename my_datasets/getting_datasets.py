@@ -26,7 +26,7 @@ def get_Electricity() -> list:
     UP mapped to 1
     DOWN mapped to 0 
     '''
-    return [(dict((i, x[i]) for i in x.keys() if i != 'class'), x['class'] == 'UP')
+    return [(dict((i, float(x[i])) for i in x.keys() if i != 'class'), int(x['class'] == 'UP'))
             for x, _ in stream.iter_arff('C:\\Users\\gosia\\Desktop\\studia\\magisterka\\env\\mgr\\my_datasets\\elecNormNew.arff.zip', compression='infer')]
 
 
