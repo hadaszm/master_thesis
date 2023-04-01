@@ -132,6 +132,7 @@ def generate_streams(initial_stream, dataset_name, q, probas, delay_type, delay,
         initial_stream = add_delay_constant(
             initial_stream.stream, delay, warm_up_period, dataset_name, q)
         dataset_name += '_constant_delay'
+        stream_set.append(initial_stream)
     elif delay_type == 2:
         initial_stream = add_delay_random(
             initial_stream.stream, delay, warm_up_period, dataset_name, q)
