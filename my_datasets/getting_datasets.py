@@ -83,10 +83,10 @@ def get_AGRAWL(classification_function: int = 0,  balance_classes: bool = False,
     return agrawl
 
 
-def get_RandomRBF(n_classes: int = 2, n_features: int = 10, n_centroids: int = 50):
+def get_RandomRBF(n_classes: int = 2, n_features: int = 10, n_centroids: int = 50, change_speed = 0.001):
     '''
     returns the RandomRBF data stream -> parameters same as in datasets.synth.RandomRBFDrift
     '''
     rrbf = datasets.synth.RandomRBFDrift(seed_model=RANDOM_SEED, seed_sample=RANDOM_SEED,
-                                         n_classes=n_classes, n_features=n_features, n_centroids=n_centroids)
+                                         n_classes=n_classes, n_features=n_features, n_centroids=n_centroids, change_speed=change_speed)
     return rrbf
