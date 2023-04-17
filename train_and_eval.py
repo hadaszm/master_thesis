@@ -2,10 +2,11 @@ from streams.utils import FL, FU, generate_stream_section
 from streams.stream_section import StreamSection
 from river import metrics
 from multiprocessing.pool import ThreadPool
-from constants import NUMBER_OF_THREADS
+from constants import NUMBER_OF_THREADS, FREQUENCY_OF_PREDICTIONS
 import numpy as np
 import logging
 import datetime
+from river.utils import Rolling
 
 def get_most_frequent(predictions):
     ''' 
@@ -151,7 +152,7 @@ def generate_streams(initial_stream, dataset_name, q, probas, delay_type, delay,
 
 
 def train_for_stream( my_stream,methods, methods_params,methods_name,
-                       metric_fun, K, B,warm_up_period):
+                       metric_fun, K, B,warm_up_period, max_length):
     results = {}
     # how many labelled instances appered -> needed for prediction of awaiting examples 
     labelled_insances_cnt = 0
@@ -160,6 +161,8 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
             # initilaze method and variables
         m = method(**methods_params[mi])
         metrics = [metric_fun() for _ in range(B+2)]
+        periodc_metric = Rolling(metric_fun(),window_size = FREQUENCY_OF_PREDICTIONS )
+        final_pred_history = []
         h = m
         L = {}
         P = {}
@@ -179,6 +182,7 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
             # labelled instance
             else:
                 labelled_insances_cnt+=1
+                periodc_metric.update(y, h.predict_one(x))
                 if cur_idx != init_idx and init_idx in P.keys():  # delayed label
                     P[init_idx][cur_idx] = h.predict_one(x)
                     L.pop(init_idx)
@@ -190,12 +194,19 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
                     if m._timestamp > warm_up_period:  # if in warmup period the prediction cannot be made
                         # if it was not delayed only last prediction exists
                         metrics[B+1].update(y, h.predict_one(x))
+                        
                 
                 make_prediction_for_awaiting(h, labelled_insances_cnt, P, L, K) 
                 h = h.learn_one(x, y)
+                if labelled_insances_cnt %FREQUENCY_OF_PREDICTIONS == 0 and labelled_insances_cnt>0 :
+                    final_pred_history.append(periodc_metric.get())
         method_params = ' '.join([f"({k};{v})" for k,v in m._get_params().items()])
-        logging.info(f"{my_stream.__name__}, {method_params}, {', '.join([str(t.get())for t in metrics])}")        
-        results[methods_name[mi]] = metrics
+        predictions_through_time = [str(final_pred_history[t])  if t< len(final_pred_history) else "" for t in range(max_length)]
+    
+
+        predictions_through_time = ', '.join(predictions_through_time)
+        logging.info(f"{my_stream.__name__}, {method_params}, {B},{FREQUENCY_OF_PREDICTIONS}, {', '.join([str(t.get())for t in metrics])},{predictions_through_time}")        
+        results[methods_name[mi]] = metrics,final_pred_history
     return my_stream.__name__,results
 
 # K how many new labelled instances need to arrive before the new prediction is made
@@ -215,11 +226,12 @@ def train_and_evaluate(initial_stream, dataset_name, Q, probas, methods, methods
     for q in Q:
         # preparing streams part
         stream_set = generate_streams(
-            initial_stream, dataset_name, q, probas, delay_type, delay,warm_up_period)
+            initial_stream, dataset_name, q, probas, delay_type, delay,warm_up_period,)
         logging.debug('Streams generated')
         # train and evaluation part
+        max_length = int(np.ceil(max([len(st.stream) for st in stream_set])/FREQUENCY_OF_PREDICTIONS))
         results_for_q = pool.map(lambda my_stream: train_for_stream( my_stream,methods, methods_params, methods_name,
-                       metric_fun, K, B,warm_up_period),stream_set )
+                       metric_fun, K, B,warm_up_period,max_length),stream_set )
     
             
         results[q] = results_for_q

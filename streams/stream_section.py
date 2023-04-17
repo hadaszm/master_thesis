@@ -8,3 +8,4 @@ class StreamSection:
         self.stream = stream
         self.is_fully_supervised = is_fully_labelled
         self.__name__ = name
+        self.__len__ = len(stream)
