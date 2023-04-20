@@ -1,3 +1,4 @@
+import operator
 from streams.utils import FL, FU, generate_stream_section
 from streams.stream_section import StreamSection
 from river import metrics
@@ -166,6 +167,7 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
         h = m
         L = {}
         P = {}
+        preds = []
         logging.debug(f" Start processing method {methods_name[mi]}")
         for cur_idx, init_idx, x, y in my_stream.stream:
             # TODO: can it be in this place
@@ -175,9 +177,13 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
                 # add instnace and index
                 L[cur_idx] = x
                 P[cur_idx] = {}
-                P[cur_idx][cur_idx] = h.predict_one(x)
-                # TODO: think what to do if the method cannot deal with unlabelled
-                h = h.learn_one(x)
+                # predict if after warm up period
+                if m._timestamp > warm_up_period:
+                    P[cur_idx][cur_idx] = h.predict_one(x)
+                    # TODO: think what to do if the method cannot deal with unlabelled
+                    preds.append(max(h.predict_proba_one(
+                    x).items(), key=operator.itemgetter(1))[1])
+                    h = h.learn_one(x)
 
             # labelled instance
             else:
@@ -206,7 +212,8 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
 
         predictions_through_time = ', '.join(predictions_through_time)
         logging.info(f"{my_stream.__name__}, {method_params}, {B},{FREQUENCY_OF_PREDICTIONS}, {', '.join([str(t.get())for t in metrics])},{predictions_through_time}")        
-        results[methods_name[mi]] = metrics,final_pred_history
+        results[methods_name[mi]] = metrics,final_pred_history,preds
+        
     return my_stream.__name__,results
 
 # K how many new labelled instances need to arrive before the new prediction is made
