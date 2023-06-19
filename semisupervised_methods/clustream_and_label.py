@@ -18,25 +18,23 @@ class CluStreamMicroClusterWithLabel(CluStreamMicroCluster):
         the rest of parameters as in CluStreamMicroCluster class
 
     """
-    def __init__(   self,   x: dict = defaultdict(float),
-        labels: dict = {},
-        w: float = None,
-        timestamp: int = None ):
-            super().__init__(x,w,timestamp)
-            self.labels = labels
-                
-    def _add_label(self,y):
-        """ add the label y occurance"""
-        self.labels[y] = self.labels.get(y,0)+1
 
-    def insert(self, x,y, w, timestamp):
+    def __init__(self,   x: dict = defaultdict(float),
+                 labels: dict = {}, w: float = 1,  timestamp: int = 0):
+        super().__init__(x, w, timestamp)
+        self.labels = labels
+
+    def _add_label(self, y):
+        """ add the label y occurance"""
+        self.labels[y] = self.labels.get(y, 0)+1
+
+    def insert(self, x, y, w, timestamp):
         """insert new instance to a microcluster"""
         self.var_time.update(timestamp, w)
         for x_idx, x_val in x.items():
             self.var_x[x_idx].update(x_val, w)
+        self.timestamp = timestamp
         self._add_label(y)
-
-
 
 
 class CluserAndLabel(CluStream):
@@ -55,20 +53,16 @@ class CluserAndLabel(CluStream):
 
        """
 
-    def __init__(self,train_period=0,
-                 n_macro_clusters: int = 5, #TODO raczej usunac jesli nie potrzebne
+    def __init__(self, train_period=0,
                  max_micro_clusters: int = 100,
-                 micro_cluster_r_factor: int = 2,
                  time_window: int = 1000,
-                 time_gap: int = 100,
                  seed: int = None,
                  **kwargs, ):
-        super().__init__(n_macro_clusters, max_micro_clusters,
-                         micro_cluster_r_factor, time_window, time_gap, seed, **kwargs)
+        super().__init__(max_micro_clusters=max_micro_clusters,
+                         time_window=time_window, seed=seed, **kwargs)
         self.micro_clusters: typing.Dict[int,
                                          CluStreamMicroClusterWithLabel] = {}
-        self.train_period=train_period
-
+        self.train_period = train_period
 
     def _merge_clusters_label_count(self, labels1, labels2):
         """
@@ -93,7 +87,6 @@ class CluserAndLabel(CluStream):
     def _maintain_micro_clusters(self, x, w, y):
         """
         Diffrence in merging introduced
-        TODO: better understandf what w does
         """
         # Calculate the threshold to delete old micro-clusters
         threshold = self._timestamp - self.time_window
@@ -140,15 +133,11 @@ class CluserAndLabel(CluStream):
             timestamp=self._timestamp,
         )
 
-    # def return_microclusters(self):
-    #     """ Method for printing the labels statistics in each microcluster"""
-    #     for i, mc in self.micro_clusters.items():
-    #         print(i,mc.labels)
     def sum_labels(self):
         """ Method for summing the number of stored labels -- needed for testing"""
         s = 0
         for i, mc in self.micro_clusters.items():
-            s+=sum([v for v in mc.labels.values()])
+            s += sum([v for v in mc.labels.values()])
         return s
 
     def predict_one(self, x):
@@ -156,6 +145,15 @@ class CluserAndLabel(CluStream):
         cluster_num = self._get_closest_mc(x)[0]
         labels = self.micro_clusters[cluster_num].labels
         return max(labels, key=labels.get)
+
+    def predict_proba_one(self, x):
+        """ Prediction proba yields the quantity of a mojority class over amount of all instanes in a microcluser x belongs to """
+        cluster_num = self._get_closest_mc(x)[0]
+        labels = self.micro_clusters[cluster_num].labels
+        if sum(Counter(labels).values()) > 0:
+            return {k: v/sum(Counter(labels).values()) for k, v in Counter(labels).items()}
+        else:
+            return {}
 
     def learn_one(self, x, y=None, w=1):
         """ Learns y as well (orginal algorithm was an unsupervised one).
@@ -165,7 +163,7 @@ class CluserAndLabel(CluStream):
             if self._timestamp < self.train_period:
                 return self
             y = self.predict_one(x)
-        
+
         self._timestamp += 1
 
         if not self._initialized:
@@ -198,7 +196,6 @@ class CluserAndLabel(CluStream):
                 distance = self._distance(mc.center, center)
                 radius = min(distance, radius)
         else:
-            print
             radius = closest_mc.radius(self.micro_cluster_r_factor)
 
         if closest_dist < radius:

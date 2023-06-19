@@ -9,6 +9,7 @@ import logging
 import datetime
 from river.utils import Rolling
 
+
 def get_most_frequent(predictions):
     ''' 
     Get the most common predction
@@ -40,7 +41,7 @@ def update_performance_measures(predictions, true_label, B, metrics):
         The true class of an instance
 
     B: int
-        Number of bins #TODO add somewhere the describtion
+        Number of bins 
 
     metrics: dict
         The dictionary holding the metrics to calculate the results
@@ -50,11 +51,16 @@ def update_performance_measures(predictions, true_label, B, metrics):
     for b in range(B+2):
         if b == 0:
             metrics[b].update(true_label, preds[0])
-        if b == B+1:
+        elif b == B+1:
             metrics[b].update(true_label, preds[-1])
-        if preds[int(1+interval*(b)):int((1+interval*(b+1)))]: #interval not empty
-                y_pred = get_most_frequent(
-                    preds[int(1+interval*(b)):int((1+interval*(b+1)))])
+        else:
+            start = int(1+interval*(b-1))
+            stop = int(1+interval*(b))
+            if stop == len(preds):
+                stop -= 1
+            interval_preds = preds[start:stop]
+            if interval_preds:
+                y_pred = get_most_frequent(interval_preds)
                 metrics[b].update(true_label, y_pred)
 
 
@@ -88,6 +94,27 @@ def make_prediction_for_awaiting(h, cur_idx, P, L, K):
 
 
 def add_delay_constant(stream, delay, no_delete_period, dataset_name, q):
+    ''' 
+    Add the constant delay for each instance from the stream
+
+    Parameters
+    ----------
+    stream: list
+        List of tuples (int,int,dict,int)
+
+    delay: int
+        The length of the delay
+
+    no_delete_period: int
+        The amount of the first instances, which should not be delayed
+
+    dataset_name: str
+        The name of the dataset
+
+    q: int, int
+        The boundries of the stream
+
+    '''
     new_stream = []
     i = 0
     for idx_1, idx_2, x, y, in stream:
@@ -101,10 +128,31 @@ def add_delay_constant(stream, delay, no_delete_period, dataset_name, q):
         new_stream.append((i+delay, i, x, y))
         i += 1
     new_stream.sort(key=lambda x: x[0])
-    return StreamSection(f'{dataset_name}_delay_{q[0]}_{q[1]}', new_stream, False)
+    return StreamSection(f'{dataset_name}_{q[0]}_{q[1]}', new_stream, False)
+
 
 def add_delay_random(stream, max_delay, no_delete_period, dataset_name, q):
-    """ Add random delay (1, max_delay)"""
+    ''' 
+    Add the random delay for each instance from the stream. The delay is drawn from (1,max_delay) interval.
+    If drawn index is not available the delay is incremented
+
+    Parameters
+    ----------
+    stream: list
+        List of tuples (int,int,dict,int)
+
+    max_delay: int
+        The max length of the delay
+
+    no_delete_period: int
+        The amount of the first instances, which should not be delayed
+
+    dataset_name: str
+        The name of the dataset
+
+    q: int, int
+        The boundries of the stream
+    '''
     new_stream = []
     used_indexes = []
     i = 0
@@ -114,20 +162,56 @@ def add_delay_random(stream, max_delay, no_delete_period, dataset_name, q):
             i = i+1
             continue
         while i in used_indexes:
-            i+=1
-        delay = np.random.randint(1,max_delay)
+            i += 1
+        delay = np.random.randint(1, max_delay)
         while i+delay in used_indexes:
-            delay+=1 # if sampling again infinite loop possible
+            delay += 1  # if sampling again infinite loop possible
         new_stream.append((i, i, x, None))
         new_stream.append((i+delay, i, x, y))
-        used_indexes.extend([i,i+delay])
+        used_indexes.extend([i, i+delay])
         i += 1
     new_stream.sort(key=lambda x: x[0])
-    return StreamSection(f'{dataset_name}_delay_{q[0]}_{q[1]}', new_stream, False)
+    return StreamSection(f'{dataset_name}_{q[0]}_{q[1]}', new_stream, False)
+
+
+def add_delay_infinite(stream, delay, no_delete_period, dataset_name, q):
+    ''' 
+    Add the infinite delay with probaiality delay
+
+    Parameters
+    ----------
+    stream: list
+        List of tuples (int,int,dict,int)
+
+    delay: float
+        The proabaility of delay
+
+    no_delete_period: int
+        The amount of the first instances, which should not be delayed
+
+    dataset_name: str
+        The name of the dataset
+
+    q: int, int
+        The boundries of the stream
+
+    '''
+
+    new_stream = []
+    i = 0
+    for idx_1, idx_2, x, y, in stream:
+        r = np.random.random()
+        if i < no_delete_period or r > delay:
+            new_stream.append((i, i, x, y))
+        else:
+            new_stream.append((i, i, x, None))
+        i += 1
+    new_stream.sort(key=lambda x: x[0])
+    return StreamSection(f'{dataset_name}_{delay}_{q[0]}_{q[1]}', new_stream, False)
 
 
 def generate_streams(initial_stream, dataset_name, q, probas, delay_type, delay, warm_up_period):
-    stream_set = []  # TODO chcek where this should be placed
+    stream_set = []  
 
     stream_set.append(initial_stream)
     if delay_type == 1:
@@ -140,6 +224,17 @@ def generate_streams(initial_stream, dataset_name, q, probas, delay_type, delay,
             initial_stream.stream, delay, warm_up_period, dataset_name, q)
         dataset_name += '_random_delay'
         stream_set.append(initial_stream)
+    elif delay_type < 1 and delay_type > 0:
+        initial_stream = add_delay_infinite(
+            initial_stream.stream, delay_type, warm_up_period, dataset_name, q)
+        dataset_name += f'_infinite_delay_{delay_type}'
+        stream_set.append(initial_stream)
+    elif delay_type == 0:
+        # no added delay so no additional stream is created
+        pass
+    else:
+        raise ValueError('No sucha a type of delay')
+
 
     for p in probas:
         ssl_stream = StreamSection(f'{dataset_name}_ssl_{p}_{q[0]}_{q[1]}', FU(
@@ -151,18 +246,18 @@ def generate_streams(initial_stream, dataset_name, q, probas, delay_type, delay,
     return stream_set
 
 
-
-def train_for_stream( my_stream,methods, methods_params,methods_name,
-                       metric_fun, K, B,warm_up_period, max_length):
+def train_for_stream(my_stream, methods, methods_params, methods_name,
+                     metric_fun, K, B, warm_up_period, max_length):
     results = {}
-    # how many labelled instances appered -> needed for prediction of awaiting examples 
+    # how many labelled instances appered -> needed for prediction of awaiting examples
     labelled_insances_cnt = 0
     logging.debug(f" Start processing {my_stream.__name__}")
     for mi, method in enumerate(methods):
-            # initilaze method and variables
+        # initilaze method and variables
         m = method(**methods_params[mi])
         metrics = [metric_fun() for _ in range(B+2)]
-        periodc_metric = Rolling(metric_fun(),window_size = FREQUENCY_OF_PREDICTIONS )
+        periodc_metric = Rolling(
+            metric_fun(), window_size=FREQUENCY_OF_PREDICTIONS)
         final_pred_history = []
         h = m
         L = {}
@@ -170,8 +265,8 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
         preds = []
         logging.debug(f" Start processing method {methods_name[mi]}")
         for cur_idx, init_idx, x, y in my_stream.stream:
-            # TODO: can it be in this place
-           
+            
+
             # unlabelled instance
             if y is None:
                 # add instnace and index
@@ -182,66 +277,68 @@ def train_for_stream( my_stream,methods, methods_params,methods_name,
                     P[cur_idx][cur_idx] = h.predict_one(x)
                     # TODO: think what to do if the method cannot deal with unlabelled
                     preds.append(max(h.predict_proba_one(
-                    x).items(), key=operator.itemgetter(1))[1])
+                        x).items(), key=operator.itemgetter(1))[1])
                     h = h.learn_one(x)
 
             # labelled instance
             else:
-                labelled_insances_cnt+=1
-                periodc_metric.update(y, h.predict_one(x))
+                labelled_insances_cnt += 1
+                if m._timestamp > warm_up_period:
+                    periodc_metric.update(y, h.predict_one(x))
                 if cur_idx != init_idx and init_idx in P.keys():  # delayed label
                     P[init_idx][cur_idx] = h.predict_one(x)
                     L.pop(init_idx)
 
                     update_performance_measures(
                         P[init_idx], y, B, metrics)
-                # TODO: probably need to implment a better option of evaluation-> for now test then train is used
-                else: #TODO: dopytac sie czy tojest ok 
+                else:  
                     if m._timestamp > warm_up_period:  # if in warmup period the prediction cannot be made
                         # if it was not delayed only last prediction exists
                         metrics[B+1].update(y, h.predict_one(x))
-                        
-                
-                make_prediction_for_awaiting(h, labelled_insances_cnt, P, L, K) 
+
+                make_prediction_for_awaiting(h, labelled_insances_cnt, P, L, K)
                 h = h.learn_one(x, y)
-                if labelled_insances_cnt %FREQUENCY_OF_PREDICTIONS == 0 and labelled_insances_cnt>0 :
+                if labelled_insances_cnt % FREQUENCY_OF_PREDICTIONS == 0 and labelled_insances_cnt > 0:
                     final_pred_history.append(periodc_metric.get())
-        method_params = ' '.join([f"({k};{v})" for k,v in m._get_params().items()])
-        predictions_through_time = [str(final_pred_history[t])  if t< len(final_pred_history) else "" for t in range(max_length)]
-    
+
+        # saving results for the method
+        method_params = ' '.join([f"({k};{v})" for k, v in m._get_params().items()])
+
+        predictions_through_time = [str(final_pred_history[t]) if t < len(final_pred_history) else "" for t in range(max_length)]
 
         predictions_through_time = ', '.join(predictions_through_time)
-        logging.info(f"{my_stream.__name__}, {method_params}, {B},{FREQUENCY_OF_PREDICTIONS}, {', '.join([str(t.get())for t in metrics])},{predictions_through_time}")        
-        results[methods_name[mi]] = metrics,final_pred_history,preds
-        
-    return my_stream.__name__,results
+        logging.info(f"{my_stream.__name__}, {method_params}, {B},{FREQUENCY_OF_PREDICTIONS}, {', '.join([str(t.get())for t in metrics])},{predictions_through_time}")
+        results[methods_name[mi]] = metrics, final_pred_history, preds
+
+    return my_stream.__name__, results
 
 # K how many new labelled instances need to arrive before the new prediction is made
-def train_and_evaluate(initial_stream, dataset_name, Q, probas, methods, methods_params,methods_name,
-                       metric_fun, delay_type, K, B, delay,warm_up_period=10):
+
+
+def train_and_evaluate(initial_stream, dataset_name, Q, probas, methods, methods_params, methods_name,
+                       metric_fun, delay_type, K, B, delay, warm_up_period=10):
     '''
     The initial stream section needs to passed
     Main evaluation and traing function
-    delay_type - 0 - NONE, 1 - equal, 2- random
+    #TODO - add logger config
     '''
 
     now = datetime.datetime.now()
     date_time = now.strftime("%d_%m_%Y_%H_%M_%S")
-    logging.basicConfig(filename=f'logs\\{date_time}.log', filemode='w', format='%(asctime)s - %(message)s',level=logging.INFO,datefmt='%d-%b-%y %H:%M:%S')
+    logging.basicConfig(filename=f'logs\\{date_time}.log', filemode='w',
+                        format='%(asctime)s - %(message)s', level=logging.INFO, datefmt='%d-%b-%y %H:%M:%S')
     pool = ThreadPool(NUMBER_OF_THREADS)
     results = {}
     for q in Q:
         # preparing streams part
         stream_set = generate_streams(
-            initial_stream, dataset_name, q, probas, delay_type, delay,warm_up_period,)
+            initial_stream, dataset_name, q, probas, delay_type, delay, warm_up_period,)
         logging.debug('Streams generated')
         # train and evaluation part
-        max_length = int(np.ceil(max([len(st.stream) for st in stream_set])/FREQUENCY_OF_PREDICTIONS))
-        results_for_q = pool.map(lambda my_stream: train_for_stream( my_stream,methods, methods_params, methods_name,
-                       metric_fun, K, B,warm_up_period,max_length),stream_set )
-    
-            
+        max_length = int(
+            np.ceil(max([len(st.stream) for st in stream_set])/FREQUENCY_OF_PREDICTIONS))
+        results_for_q = pool.map(lambda my_stream: train_for_stream(my_stream, methods, methods_params, methods_name,
+                                                                    metric_fun, K, B, warm_up_period, max_length), stream_set)
+
         results[q] = results_for_q
     return results
-
-        
