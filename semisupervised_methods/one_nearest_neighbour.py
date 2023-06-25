@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from river.preprocessing import StandardScaler
 from river.neighbors import KNNClassifier as riverKNN
+import inspect
+import typing
 
 class oneNNClassifer():
     def __init__(self, training_time = 1000, threshold = 1,positive =1,negative = 0,required_ratio = 0.75) -> None:
@@ -35,7 +37,8 @@ class oneNNClassifer():
             
         while (len(self.L)/(len(self.L)+len(self.U)))<self.required_ratio:
             self._label_the_closest()
-        del self.L, self.U
+        self.L = pd.DataFrame()
+        self.U = pd.DataFrame()
 
     def learn_one(self,x,y=None):
         self.scaler.learn_one(x)
@@ -61,4 +64,19 @@ class oneNNClassifer():
         if len(dist) >0 and dist[0][1] < self.threshold:
             return self.positive
         return self.negative
+    
+
+    def _get_params(self) -> typing.Dict[str, typing.Any]:
+        """
+        Returns the parameters that were used during initialization
+        """
+
+        params = {}
+        params['threshold'] = self.threshold
+        params['training_time']=self.training_time
+        params['positive']=self.positive 
+        params['negative']=self.negative
+        params['required_ratio'] = self.required_ratio 
+
+        return params
 

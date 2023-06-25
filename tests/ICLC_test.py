@@ -98,6 +98,17 @@ class ICLCTest(unittest.TestCase):
         iclc = iclc.learn_one(x,y)
         self.assertTrue(mock.called)
 
+    def test_learn_from_unlabelld(self):
+        iclc = self._initialize()
+        for x,y in self.dataset.take(10):
+            iclc = iclc.learn_one(x,y)
+        for x,y in self.dataset.take(10):
+            iclc = iclc.learn_one(x)
+
+        x,y = next(self.dataset.take(1))
+        iclc = iclc.learn_one(x,y)
+        self.assertEqual(iclc._timestamp, 13)  
+
 
 
 

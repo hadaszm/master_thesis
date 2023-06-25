@@ -60,7 +60,7 @@ class ICLC(RiverClassifer):
         """
 
         predicted_labels = []
-        for center in self.clustering_method.center:
+        for center in self.clustering_method.centers.values():
             x = dict(zip(columns, center))
             y = self.classifier.predict_one(x)
             predicted_labels.append((x, y))

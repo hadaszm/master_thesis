@@ -4,6 +4,10 @@ from river import stream
 from constants import RANDOM_SEED
 import pandas as pd
 import os
+from streams.stream_section import StreamSection
+from tqdm import tqdm
+
+
 
 # methods for getting datasets
 
@@ -90,3 +94,36 @@ def get_RandomRBF(n_classes: int = 2, n_features: int = 10, n_centroids: int = 5
     rrbf = datasets.synth.RandomRBFDrift(seed_model=RANDOM_SEED, seed_sample=RANDOM_SEED,
                                          n_classes=n_classes, n_features=n_features, n_centroids=n_centroids, change_speed=change_speed)
     return rrbf
+
+
+def transform_Airlines(datastream):
+    ''' 
+    transforms Airlines dataset, in the way the natural delay is preserved
+    '''
+    used_indexes = []
+    stream = []
+    for x,y in tqdm(datastream):
+        init_idx = (int(x['DayOfWeek'])-1)*60*24+int(x['Time'])
+        cur_idx = init_idx+int(x['Length'])
+        while init_idx in used_indexes or cur_idx in used_indexes:
+            init_idx+=1
+            cur_idx+=1
+        used_indexes.extend([init_idx,cur_idx])
+        stream.append((init_idx,init_idx,x,None))
+        stream.append((cur_idx,init_idx,x,y))
+    stream.sort(key=lambda x: x[0])
+    return StreamSection(f'Airlines', stream, False)
+
+
+def transform_Electricity(datastream):
+    ''' 
+    transforms Electricity dataset, in the way the natural delay is preserved
+    '''
+    stream = []
+    for i,(x,y) in enumerate(tqdm(datastream)):
+        init_idx = i
+        cur_idx = i+48
+        stream.append((init_idx,init_idx,x,None))
+        stream.append((cur_idx,init_idx,x,y))
+    stream.sort(key=lambda x: x[0])
+    return StreamSection(f'Electricity', stream, False)
