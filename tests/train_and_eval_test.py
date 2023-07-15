@@ -1,6 +1,7 @@
 import unittest
 from train_and_eval import update_performance_measures
 from river.metrics.accuracy import Accuracy
+import numpy as np
 
 class TestTrainAndEval(unittest.TestCase):
     def test_update_performance_measures(self):
@@ -17,6 +18,24 @@ class TestTrainAndEval(unittest.TestCase):
             update_performance_measures(preds, true_label, B, metrics)
 
         self.assertEqual([t.get() for t in metrics],[1, 0.5, 0.5, 0])
+
+
+    def test_update_performance_measures2(self):
+        # Create a sample input
+        predictions = [dict(zip(range(50),[1 for _ in range(50)]))]
+
+        true_label = 1
+        B = 50
+        metrics = [Accuracy() for _ in range(B+2)]
+
+        
+        for preds in predictions:
+            update_performance_measures(preds, true_label, B, metrics)
+
+        pass
+
+        #self.assertEqual([t.get() for t in metrics],[1, 0.5, 0.5, 0])
+
 
 if __name__ == '__main__':
     unittest.main()

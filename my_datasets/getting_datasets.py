@@ -102,7 +102,7 @@ def transform_Airlines(datastream):
     '''
     used_indexes = []
     stream = []
-    for x,y in tqdm(datastream):
+    for x,y in tqdm(datastream[:10000]):
         init_idx = (int(x['DayOfWeek'])-1)*60*24+int(x['Time'])
         cur_idx = init_idx+int(x['Length'])
         while init_idx in used_indexes or cur_idx in used_indexes:

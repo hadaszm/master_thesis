@@ -61,9 +61,8 @@ class ICLC(RiverClassifer):
 
         predicted_labels = []
         for center in self.clustering_method.centers.values():
-            x = dict(zip(columns, center))
-            y = self.classifier.predict_one(x)
-            predicted_labels.append((x, y))
+            y = self.classifier.predict_one(center)
+            predicted_labels.append((center, y))
 
         for x, y in predicted_labels:
             self._timestamp += 1
@@ -111,6 +110,7 @@ class ICLC(RiverClassifer):
         
 
         if self._check_if_drift_detetcted():
+            print('drift detected')
             self.clustering_method = self.clustering_method_type(**self.clustering_params)
             self._unlabelled_instances_cnt = 0
             return self
