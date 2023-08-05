@@ -22,7 +22,7 @@ class TestTrainAndEval(unittest.TestCase):
 
     def test_update_performance_measures2(self):
         # Create a sample input
-        predictions = [dict(zip(range(50),[1 for _ in range(50)]))]
+        predictions = [dict(zip(range(5),[1 for _ in range(5)]))]
 
         true_label = 1
         B = 50
@@ -34,7 +34,7 @@ class TestTrainAndEval(unittest.TestCase):
 
         pass
 
-        #self.assertEqual([t.get() for t in metrics],[1, 0.5, 0.5, 0])
+        self.assertEqual([t.get() for t in metrics],[1 for _ in range(50)])
 
 
 if __name__ == '__main__':
