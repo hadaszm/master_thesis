@@ -6,32 +6,31 @@ import pandas as pd
 import os
 from streams.stream_section import StreamSection
 from tqdm import tqdm
+from constants import PATH
+
 
 
 
 # methods for getting datasets
 
 
-# real data sets 
-# TOD): zmienic sciezki
-
 
 def get_Airlines() -> list:
     '''
-    returns Airlines data set #TODO maybe add one hot encoding - or some methods will not be applicable
+    returns Airlines data set 
     '''
     return [(dict((i, x[i]) for i in x.keys() if i != 'Delay'), x['Delay'])
-            for x, _ in stream.iter_arff('C:\\Users\\gosia\\Desktop\\studia\\magisterka\\env\\mgr\\my_datasets\\airlines.arff.zip', compression='infer')]
+            for x, _ in stream.iter_arff(os.path.join(PATH,'airlines.arff.zip'), compression='infer')]
 
 
 def get_Electricity() -> list:
     '''
-    returns Electricity  data set #TODO maybe add one hot encoding - or some methods will not be applicable
+    returns Electricity  data set
     UP mapped to 1
     DOWN mapped to 0 
     '''
     return [(dict((i, float(x[i])) for i in x.keys() if i != 'class'), int(x['class'] == 'UP'))
-            for x, _ in stream.iter_arff('C:\\Users\\gosia\\Desktop\\studia\\magisterka\\env\\mgr\\my_datasets\\elecNormNew.arff.zip', compression='infer')]
+            for x, _ in stream.iter_arff(os.path.join(PATH,'elecNormNew.arff.zip'), compression='infer')]
 
 
 def get_CoverType() -> list:
@@ -50,7 +49,7 @@ def get_CoverType() -> list:
 
     mappings = dict(zip(cols, data_types))
 
-    df = pd.read_csv('C:\\Users\\gosia\\Desktop\\studia\\magisterka\\env\\mgr\\my_datasets\\covtype.data.gz', compression='infer',
+    df = pd.read_csv(os.path.join(PATH,'covtype.data.gz'), compression='infer',
                      header=None, names=cols, dtype=mappings)
     cover_type = [(x, y) for x, y in zip(
         df.drop(columns='Cover_Type').to_dict('records'), df['Cover_Type'])]
