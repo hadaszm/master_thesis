@@ -71,9 +71,27 @@ class IncrementalClassifer(RiverClassifer):
         return self
 
     def predict_one(self, x):
+        """ 
+        pass this method to the classifer instance
+        
+        Parameters
+       ----------
+        x : dict
+            instance to predict
+
+        """
         return self.classifier.predict_one(x=x)
 
     def predict_proba_one(self, x):
+        """ 
+        pass this method to the classifer instance
+        
+        Parameters
+       ----------
+        x : dict
+            instance to predict
+
+        """
         return self.classifier.predict_proba_one(x=x)
 
     def _get_params(self) -> typing.Dict[str, typing.Any]:

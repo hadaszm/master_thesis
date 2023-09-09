@@ -51,7 +51,7 @@ class ICLC(RiverClassifer):
         """
         Train the classifer on unlabelled instances by 
         1. predicting the psudolabels
-        2. fed the classifier with that intances + pseudolabels
+        2. fed the classifier with that instance + pseudolabels
 
         Parameters
         ----------
@@ -88,6 +88,16 @@ class ICLC(RiverClassifer):
 
 
     def _update_drift_detector(self,dd,x):
+        """
+       Updates the drift detector dd with x
+
+        Parameters
+        ----------
+        dd: 
+            drift detector
+        x: dict 
+            instance 
+        """
         dd.update(x)
 
     def learn_one(self, x, y=None):
@@ -98,7 +108,7 @@ class ICLC(RiverClassifer):
         Parameters
         ----------
         x: dict 
-            intsance 
+            instance 
         y: int, optional
             label of the instance
         """
@@ -127,6 +137,15 @@ class ICLC(RiverClassifer):
             return self
 
     def predict_one(self, x):
+        """ 
+        pass this method to the classifer instance
+        
+        Parameters
+       ----------
+        x : dict
+            instance to predict
+
+        """
         return self.classifier.predict_one(x=x)
 
     def _get_params(self) -> typing.Dict[str, typing.Any]:

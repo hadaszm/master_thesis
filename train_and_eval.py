@@ -344,12 +344,16 @@ def train_for_stream(my_stream, methods, methods_params, methods_names,
     for mi, method in enumerate(methods):
         # initilaze method and variables
         results[methods_names[mi]] = {}
+
         try:
             m = method(**methods_params[mi])
         except Exception as e:
             logger.warning('Cannot initialize the method')
             continue
+        # calculate results for each metric
         for metric_fun in metric_funs:
+
+            # init metric for each bin
             metrics = [metric_fun() for _ in range(B+2)]
             periodc_metric = Rolling(
                 metric_fun(), window_size=FREQUENCY_OF_PREDICTIONS)
@@ -384,9 +388,8 @@ def train_for_stream(my_stream, methods, methods_params, methods_names,
                                 update_performance_measures(
                                     P[init_idx], y, B, metrics)
                             else:  
-                                if m._timestamp > warm_up_period:  # if in warmup period the prediction cannot be made
-                                    # if it was not delayed only last prediction exists
-                                    metrics[B+1].update(y, h.predict_one(x))
+                                # if it was not delayed only last prediction exists
+                                metrics[B+1].update(y, h.predict_one(x))
 
                             make_prediction_for_awaiting(h, labelled_insances_cnt, P, L, K)
                         h = h.learn_one(x, y)

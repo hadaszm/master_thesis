@@ -35,7 +35,10 @@ def generate_stream_section(datastream, stream_name, dataset_type = 'real', with
         list of  init_index, cur_idx, instance, labvel
     """
     if dataset_type == 'synth':
+        # determine how many instances to take
         to_take = stop-start
+
+        # scale if requested
         if not with_scaling:
             return StreamSection(stream_name, [(cur_idx, cur_idx, x,y) for cur_idx, (x,y) in enumerate(datastream.take(to_take))], True)
         else:
@@ -47,6 +50,7 @@ def generate_stream_section(datastream, stream_name, dataset_type = 'real', with
                 res.append((cur_index,cur_index,x,y))
             return StreamSection(stream_name, res, True)
     elif dataset_type == 'real':
+         # scale if requested
         if not with_scaling:
             return StreamSection(stream_name, [(cur_idx, cur_idx, x,y) for cur_idx, (x,y) in enumerate(datastream[start:stop])], True)
         else:
